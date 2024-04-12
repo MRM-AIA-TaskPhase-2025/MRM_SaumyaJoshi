@@ -1,0 +1,5 @@
+<launch>
+  <node name="chatroom_node" type="chatroom_node" pkg="chatroom" output="screen"/>
+ 
+</launch>
+
