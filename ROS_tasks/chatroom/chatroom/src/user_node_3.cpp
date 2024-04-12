@@ -5,10 +5,10 @@
 
 void messageCallback(const chatroom::ChatMessage::ConstPtr& msg) {
     // Check if the sender is not user3 (user_node_3)
-    if (msg->sender != "user3") {
+    //if (msg->sender != "user3") {
         // Process the incoming msg and display it
         ROS_INFO("[%s] %s", msg->sender.c_str(), msg->message.c_str());
-    }
+    //}
 }
 
 int main(int argc, char** argv) {

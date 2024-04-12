@@ -4,13 +4,12 @@
 #include <string>
 
 void messageCallback(const chatroom::ChatMessage::ConstPtr& msg) {
-    // Check if the sender is not user2 (user_node_2)
-    if (msg->sender != "user2") {
+    // Check if the sender is not user3 (user_node_3)
+    //if (msg->sender != "user2") {
         // Process the incoming msg and display it
         ROS_INFO("[%s] %s", msg->sender.c_str(), msg->message.c_str());
-    }
+    //}
 }
-
 
 int main(int argc, char** argv) {
     // initialize publisher node
@@ -37,10 +36,12 @@ int main(int argc, char** argv) {
 
     // to read user input and send messages to chatroom
     std::string message;
+    
     while (ros::ok()) {
+        
         std::cout << "Enter message: ";
         std::getline(std::cin, message);
-
+        
         // creating ChatMessage object 
         chatroom::ChatMessage chat_msg;
         chat_msg.sender = "user2"; // Set the sender
