@@ -36,8 +36,8 @@ ROS Topics published:at
 
 ROS Messages and services used:
 Messages: 
-ChatMessage.msg - (string sender
-                  string message)
+std_msgs/String
+
 Services: 
 /chatroom_node/get_loggers
 /chatroom_node/set_logger_level
