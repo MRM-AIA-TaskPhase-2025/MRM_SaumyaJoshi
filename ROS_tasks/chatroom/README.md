@@ -33,8 +33,6 @@ rosrun chatroom user_node_3
 
 ROS Topics published:at
 /chatroom_topic
-/rosout
-/rosout_agg
 
 ROS Messages and services used:
 Messages: 
