@@ -33,13 +33,11 @@ rosrun chatroom user_node_3
 
 ROS Topics published:at
 /chatroom_topic
-/rosout
-/rosout_agg
 
 ROS Messages and services used:
 Messages: 
-ChatMessage.msg - (string sender
-                  string message)
+std_msgs/String
+
 Services: 
 /chatroom_node/get_loggers
 /chatroom_node/set_logger_level
