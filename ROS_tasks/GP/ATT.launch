@@ -1,0 +1,5 @@
+<launch>
+    <!-- Launch the node for autonomous traversal -->
+    <node name="rover_controller_node" pkg="rover" type="rover_controller_node" output="screen">
+    </node>
+</launch>
