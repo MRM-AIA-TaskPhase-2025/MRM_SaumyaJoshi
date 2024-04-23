@@ -1,0 +1,36 @@
+1) Description of Task:
+
+Objective: The task involves programming a rover to continuously adjust its orientation while moving towards a target GPS coordinate.
+Logic:
+    Upon initialization, the rover subscribes to GPS fixes to receive its current location.
+    The initial bearing to the target GPS coordinate is calculated using the Haversine formula.
+    In the main loop, the rover continuously calculates its current bearing to the target and adjusts its orientation to minimize the angle error between the initial bearing and the current bearing.
+    Linear and angular velocities are adjusted based on the angle error, allowing the rover to turn towards the target while moving forward.
+    The loop continues until the rover reaches the target GPS coordinate, at which point it stops moving.
+The code implements a basic control system for a rover to navigate towards a target GPS coordinate while continuously adjusting its orientation based on the difference between the initial bearing and the current bearing to the target.
+
+
+2) Description of the used ROS Nodes, Topics, and Messages:
+
+Topics: 
+/cmd_vel - to publish the linear and angular velocities to control rover's movement
+/imu - subscribe to get the value of yaw component to match the orientation of the rover to initial bearing
+/rover/gps/fix - subscribe to get the latitude and longitude coordinates of the rover's current position
+
+Nodes:
+/rover_controller_node 
+/gazebo
+/gazebo_gui
+/joint_state_publisher
+/robot_state_publisher
+/rosout
+/rviz
+
+Messages: 
+messages from the three mentioned topics were used. Described above.
+
+3)RQT graph in folder
+
+4) Link to YouTube Video:
+https://youtu.be/TQXElIYC764
+
