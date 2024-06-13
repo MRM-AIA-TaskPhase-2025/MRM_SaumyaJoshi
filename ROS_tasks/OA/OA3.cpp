@@ -47,7 +47,7 @@ public:
     enum class WallFollowState {
         FOLLOW_WALL,
         TURN_LEFT,
-        TURN_RIGHT,
+        TURN_LEF,
         FIND_WALL,
         NAVIGATE_AROUND_OBSTACLE
     };
@@ -95,68 +95,108 @@ public:
 
  
     void laserCallback(const sensor_msgs::LaserScan::ConstPtr& msg) {
-        // Ensure there are ranges to process
+        double minDistThreshold = 1.0; // Minimum distance to consider as an obstacle
+        double bufferZone = 0;       // Buffer zone for more robust obstacle detection
+        double sideLength = 0.5;       // Length of one side of the rover (in meters)
+        bool obstacleDetectedInScan = false;
+        crash = false;
+        // Ensure there are minRange to process
         int numRanges = msg->ranges.size();
         if (numRanges == 0) {
             std::cout << "No range data available." << std::endl;
             return;
         }
 
-        // Extract relevant ranges
-        rightDist = msg->ranges[0]; // 90 degrees to the right
-        frontDist = msg->ranges[89]; // Directly in front, assuming 180 degree scan range
-
-        // Debug prints for initial values
-        //std::cout << "Initial Ranges: rightDist: " << rightDist << ", frontDist: " << frontDist << std::endl;
-
-        // Simple obstacle detection logic
-        double minDistThreshold = 0.9; // Minimum distance to consider as an obstacle
-        double bufferZone = 0;       // Buffer zone for more robust obstacle detection
-        double sideLength = 0.5;       // Length of one side of the rover (in meters)
-        bool obstacleDetectedInScan = false;
-        crash = false;
-
         double angleIncrement = msg->angle_increment;
         double startAngle = msg->angle_min;
 
         // Debug prints for angle increment and start angle
-        //std::cout << "Angle Increment: " << angleIncrement << ", Start Angle: " << startAngle << std::endl;
+        std::cout << "Angle Increment: " << angleIncrement << ", Start Angle: " << startAngle << std::endl;
+
+        // Find the minimum distance in the ranges array and its corresponding angle
+        double minRange = std::numeric_limits<double>::infinity();
+        int minIndex = -1;
 
         for (int i = 0; i < numRanges; ++i) {
-            double range = msg->ranges[i];
-            double angle = startAngle + i * angleIncrement;
+            if (msg->ranges[i] < minRange) {
+                minRange = msg->ranges[i];
+                minIndex = i;
+            }
+        }
+
+        if (minIndex == -1) {
+            std::cout << "No valid range data available." << std::endl;
+            obstacleDetected = false;
+            navigatingAroundObstacle = false;
+            return;
+        }
+
+        // Calculate the angle corresponding to the minimum range
+        double minAngle = startAngle + minIndex * angleIncrement;
+        double minAngleDegrees = minAngle * 180.0 / M_PI;
+
+        // Print the results
+        std::cout << "Minimum Range: " << minRange << ", Angle: " << minAngleDegrees << " degrees" << std::endl;
+
+    // Calculate the effective threshold based on the angle of the minimum range
+        double effectiveThreshold;
+        // Extract relevant minRange
+        rightDist = msg->ranges[0]; // 90 degrees to the right
+        frontDist = msg->ranges[89]; // Directly in front, assuming 180 degree scan minRange
+
+        // Debug prints for initial values
+        //std::cout << "Initial minRange: rightDist: " << rightDist << ", frontDist: " << frontDist << std::endl;
+
+        // Simple obstacle detection logic
+        
+
+       // double angleIncrement = msg->angle_increment;
+        //double startAngle = msg->angle_min;
+
+        // Debug prints for angle increment and start angle
+        //std::cout << "Angle Increment: " << angleIncrement << ", Start Angle: " << startAngle << std::endl;
+
+        //for (int i = 0; i < numminmins; ++i) {
+           // double minRange = msg->minRange[i];
+            //double angle = startAngle + i * angleIncrement;
 
             // Calculate the effective threshold based on the angle
-            double effectiveThreshold;
+            //double effectiveThreshold;
             //double absAngle = std::fabs(angle);
 
-            // Normalize the angle within the range [0, 180]
+            // Normalize the angle within the minRange [0, 180]X
             //absAngle = std::fmod(absAngle, M_PI);
 
             // Convert to degrees for easier handling
-            double angleDegrees = angle * 180.0 / M_PI;
-
+            //double minAngle = angle * 180.0 / M_PI;
+            
             // Debug print statements
-            //std::cout << "Range[" << i << "]: " << range << ", Angle: " << angleDegrees << " degrees" << std::endl;
-            if ((angleDegrees >= 0 && angleDegrees <= 9) || (angleDegrees >= 70 && angleDegrees <= 89)) {
+            //std::cout << "minRange[" << i << "]: " << minRange << ", Angle: " << minAngle << " degrees" << std::endl;
+            if ((minAngleDegrees >= 0 && minAngleDegrees <= 9) || (minAngleDegrees >= 70 && minAngleDegrees <= 89)) {
                 // Calculate for angles between 0 to 9 degrees and 70 to 89 degrees
                 effectiveThreshold = minDistThreshold;
+                //std::cout << "minRange: " << minRange << std::endl; 
+                if (minRange < 0.75) {
+                crash = true;
+            }
             } else {
                 // For other angles, use the minimum threshold
                 effectiveThreshold = std::sqrt(2.0) * minDistThreshold;
+                //std::cout << "minRange: " << minRange << std::endl; 
+                if (minRange < effectiveThreshold / 1.5) {
+                crash = true;
+            }
             }
             // Debug print statements
             //std::cout << "Effective Threshold: " << effectiveThreshold << std::endl;
 
-            // Check if the range is below the effective threshold
-            if (range < effectiveThreshold / 1.5) {
-                crash = true;
-            }
-            if (range < effectiveThreshold) {
+            // Check if the minRange is below the effective threshold
+            
+            if (minRange < effectiveThreshold) {
                 obstacleDetectedInScan = true;
-                break;
+                //break;
             }
-        }
+    
 
         // Update obstacle detection status
         if (obstacleDetectedInScan) {
@@ -199,8 +239,8 @@ public:
 
     // Method for wall-following behavior
     void followWall() {
-        double desiredDistance = 0.9; // Desired distance from the wall (meters)
-        double k_p = 0.9; // Proportional gain
+        double desiredDistance = 1.0; // Desired distance from the wall (meters)
+        double k_p = 1.0; // Proportional gain
 
         geometry_msgs::Twist twistMsg;
 
@@ -216,25 +256,29 @@ public:
                     std::cout << "Transition to TURN_LEFT" << std::endl;
                 } else if (crash) {
                     // Very close to a corner, transition to TURN_RIGHT state
-                    wallFollowState = WallFollowState::TURN_LEFT;
+                    wallFollowState = WallFollowState::TURN_LEF;
                     std::cout << "Transition to TURN_RIGHT" << std::endl;
-                } else if (rightDist > desiredDistance * 2 && !std::isinf(rightDist)) {
+                } else if (rightDist > desiredDistance * 3 && !std::isinf(rightDist)) {
                     // Lost the wall, transition to FIND_WALL state
                     //wallFollowState = WallFollowState::FIND_WALL;
+                    if(obstacleDetected) {
+                        twistMsg.linear.x = 0.3;
+                        twistMsg.angular.z = 0.0;
+                    }
                     navigatingAroundObstacle=false;
                     std::cout << "Transition to FIND_WALL" << std::endl;
                 } else {
                     // Maintain distance from the wall on the right
                     double error = desiredDistance - rightDist;
                     twistMsg.linear.x = 0.3; // Move forward
-                    twistMsg.angular.z = 0; // Adjust direction based on the error
+                    twistMsg.angular.z = error * k_p; // Adjust direction based on the error
                     std::cout << "Moving forward with error adjustment" << std::endl;
                 }
                 break;
 
             case WallFollowState::TURN_LEFT:
                 std::cout << "State: TURN_LEFT" << std::endl;
-                if (rightDist <= (desiredDistance + 0.05) && rightDist >= (desiredDistance - 0.05) && std::isinf(frontDist)) {
+                if (rightDist <= (desiredDistance + 0.1) && rightDist >= (desiredDistance - 0.2) && std::isinf(frontDist)) {
                     // Aligned with the wall and obstacle cleared, transition back to FOLLOW_WALL state
                     wallFollowState = WallFollowState::FOLLOW_WALL;
                     std::cout << "Transition to FOLLOW_WALL after aligning with wall and clearing obstacle" << std::endl;
@@ -243,15 +287,22 @@ public:
                 twistMsg.angular.z = 0.5;
                 break;
 
-            case WallFollowState::TURN_RIGHT:
-                std::cout << "State: TURN_RIGHT" << std::endl;
-                if (rightDist >= desiredDistance / 2) {
-                    // Turned enough to the right, transition back to FOLLOW_WALL state
+            case WallFollowState::TURN_LEF:
+                std::cout << "State: TURN_LEF" << std::endl;
+                if (rightDist <= (desiredDistance + 0.05) && rightDist >= (desiredDistance - 0.05) && std::isinf(frontDist)) {
+                    // Aligned with the wall and obstacle cleared, transition back to FOLLOW_WALL state
                     wallFollowState = WallFollowState::FOLLOW_WALL;
-                    std::cout << "Transition to FOLLOW_WALL after turning right" << std::endl;
+                    std::cout << "Transition to FOLLOW_WALL after aligning with wall and clearing obstacle" << std::endl;
                 }
-                twistMsg.linear.x = 0.0;
-                twistMsg.angular.z = -1.0;
+                if (rightDist<desiredDistance && rightDist>0.4) {
+                twistMsg.linear.x = 0.3;
+                twistMsg.angular.z = 0.1;
+                
+                }
+                else { twistMsg.linear.x = 0.0;
+                twistMsg.angular.z = 0.5;
+                }
+                wallFollowState = WallFollowState::FOLLOW_WALL;
                 break;
 
             case WallFollowState::FIND_WALL:
@@ -307,21 +358,7 @@ public:
 
             geometry_msgs::Twist twistMsg;
 
-            if (obstacleDetected || navigatingAroundObstacle) {
-                initialBearing = calculateBearing(currentLatitude, currentLongitude, targetLatitude, targetLongitude);
-                std::cout << "Initial bearing: " << initialBearing << " degrees" << std::endl;
-                std::cout << std::abs(currentLatitude - (slope * currentLongitude + yIntercept)) << "AAAAAAAAAAAA" << std::endl;
-                std::cout << currentLatitude << " " << currentLongitude << std::endl;
-                if ((distance < D1*0.8) && (std::abs(currentLatitude - (slope * currentLongitude + yIntercept)) < 0.000001)) {
-                    std::cout << "INNNNNNNNNNNNNNNNNNN" << std::endl;
-                    twistMsg.angular.z = angleError * 0.2; // Adjust yaw
-                    twistMsg.linear.x = 0.0;
-                    cmdVelPub.publish(twistMsg); 
-                    navigatingAroundObstacle=false;}
-                else {
-                    followWall();
-                    navigatingAroundObstacle = true; } // Set flag to indicate navigating around an obstacle
-            } else if (distance <= 0.3 && std::fabs(angleError) <= 0.1) {
+            if (distance <= 0.3 ) {
                 std::cout << "Rover reached target position." << std::endl;
                 //geometry_msgs::Twist twistMsg;
                 twistMsg.linear.x = 0.0;
@@ -342,11 +379,26 @@ public:
                 std::cout << "Initial bearing: " << initialBearing << " degrees" << std::endl;
                 WallFollowState wallFollowState = WallFollowState::FOLLOW_WALL;
                 hitPointSet=false;
-            } else if (distance > 0.3 && std::fabs(angleError) <= 0.1) {
+            }
+            else if (obstacleDetected || navigatingAroundObstacle) {
+                initialBearing = calculateBearing(currentLatitude, currentLongitude, targetLatitude, targetLongitude);
+                std::cout << "Initial bearing: " << initialBearing << " degrees" << std::endl;
+                std::cout << std::abs(currentLatitude - (slope * currentLongitude + yIntercept)) << "AAAAAAAAAAAA" << std::endl;
+                std::cout << currentLatitude << " " << currentLongitude << std::endl;
+                /* if ((distance < D1*0.7) && (std::abs(currentLatitude - (slope * currentLongitude + yIntercept)) < 0.000001)) {
+                    std::cout << "INNNNNNNNNNNNNNNNNNN" << std::endl;
+                    twistMsg.angular.z = angleError * 0.2; // Adjust yaw
+                    twistMsg.linear.x = 0.0;
+                    cmdVelPub.publish(twistMsg); 
+                    navigatingAroundObstacle=false;}
+                else { */
+                    followWall();
+                    navigatingAroundObstacle = true; } // Set flag to indicate navigating around an obstacle
+            else if (distance > 0.3 && std::fabs(angleError) <= 0.1) {
                 twistMsg.linear.x = 0.3; // Move forward
                 twistMsg.angular.z = 0.0; // Go straight
-                cmdVelPub.publish(twistMsg);    
-            } else {
+                cmdVelPub.publish(twistMsg); } 
+            else {
                 twistMsg.angular.z = angleError * 0.2; // Adjust yaw
                 twistMsg.linear.x = 0.0;
                 cmdVelPub.publish(twistMsg);
@@ -367,7 +419,7 @@ private:
 
 int main(int argc, char **argv) {
     // Initialize ROS node
-    ros::init(argc, argv, "rover_controller_node");
+    ros::init(argc, argv, "OA3");
     ros::NodeHandle nh;
 
     // Create a rover instance

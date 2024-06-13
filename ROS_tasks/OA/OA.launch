@@ -1,0 +1,5 @@
+<launch>
+    <!-- Launch the node for autonomous traversal -->
+    <node name="OA3" pkg="rover" type="OA3" output="screen">
+    </node>
+</launch>
