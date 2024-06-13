@@ -1,0 +1,4 @@
+Description of Task:
+Used Bug2 algorithm to follow the boundary of the obstacle till it is detected and move towards the target once the path is clear.
+
+Description of the used ROS Nodes, Topics, and Messages:
