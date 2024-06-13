@@ -1,4 +1,27 @@
-Description of Task:
+1) Description of Task:
 Used Bug2 algorithm to follow the boundary of the obstacle till it is detected and move towards the target once the path is clear.
 
-Description of the used ROS Nodes, Topics, and Messages:
+2) Description of the used ROS Nodes, Topics, and Messages:
+
+Topics: 
+/cmd_vel - to publish the linear and angular velocities to control rover's movement
+/imu - subscribe to get the value of yaw component to match the orientation of the rover to initial bearing
+/rover/gps/fix - subscribe to get the latitude and longitude coordinates of the rover's current position
+/scan- to detect any obstacle and calculate its distance from the rover
+
+Nodes:
+/OA3
+/gazebo
+/gazebo_gui
+/joint_state_publisher
+/robot_state_publisher
+/rosout
+/rviz
+
+Messages: 
+messages from the three mentioned topics were used. Described above.
+
+3) RQT graph in folder
+
+4) Link to YouTube Video:
+
