@@ -90,7 +90,7 @@ public:
 
         // Update rover's current yaw value based on received IMU data
         currentYaw = toDegrees(yaw);
-        std::cout << "Yaw (degrees): " << currentYaw << std::endl;
+        //std::cout << "Yaw (degrees): " << currentYaw << std::endl;
     }
 
  
@@ -111,7 +111,7 @@ public:
         double startAngle = msg->angle_min;
 
         // Debug prints for angle increment and start angle
-        std::cout << "Angle Increment: " << angleIncrement << ", Start Angle: " << startAngle << std::endl;
+        //std::cout << "Angle Increment: " << angleIncrement << ", Start Angle: " << startAngle << std::endl;
 
         // Find the minimum distance in the ranges array and its corresponding angle
         double minRange = std::numeric_limits<double>::infinity();
@@ -127,7 +127,7 @@ public:
         if (minIndex == -1) {
             std::cout << "No valid range data available." << std::endl;
             obstacleDetected = false;
-            navigatingAroundObstacle = false;
+            //navigatingAroundObstacle = false;
             return;
         }
 
@@ -136,14 +136,14 @@ public:
         double minAngleDegrees = minAngle * 180.0 / M_PI;
 
         // Print the results
-        std::cout << "Minimum Range: " << minRange << ", Angle: " << minAngleDegrees << " degrees" << std::endl;
+        //std::cout << "Minimum Range: " << minRange << ", Angle: " << minAngleDegrees << " degrees" << std::endl;
 
     // Calculate the effective threshold based on the angle of the minimum range
         double effectiveThreshold;
         // Extract relevant minRange
         rightDist = msg->ranges[0]; // 90 degrees to the right
         frontDist = msg->ranges[89]; // Directly in front, assuming 180 degree scan minRange
-
+        //std::cout << "right: " << rightDist << " front: " << frontDist << std::endl;
         // Debug prints for initial values
         //std::cout << "Initial minRange: rightDist: " << rightDist << ", frontDist: " << frontDist << std::endl;
 
@@ -172,7 +172,7 @@ public:
             
             // Debug print statements
             //std::cout << "minRange[" << i << "]: " << minRange << ", Angle: " << minAngle << " degrees" << std::endl;
-            if ((minAngleDegrees >= 0 && minAngleDegrees <= 9) || (minAngleDegrees >= 70 && minAngleDegrees <= 89)) {
+            if ((minAngleDegrees >= 0 && minAngleDegrees <= 9) || (minAngleDegrees >= 70 && minAngleDegrees <= 109) || (minAngleDegrees >= 160 && minAngleDegrees <= 180)) {
                 // Calculate for angles between 0 to 9 degrees and 70 to 89 degrees
                 effectiveThreshold = minDistThreshold;
                 //std::cout << "minRange: " << minRange << std::endl; 
@@ -202,12 +202,7 @@ public:
         if (obstacleDetectedInScan) {
             obstacleDetected = true;
             std::cout << "Obstacle detected" << std::endl;
-            if (!hitPointSet) {
-                hitLatitude = currentLatitude;
-                hitLongitude = currentLongitude;
-                hitPointSet = true;
-                std::cout << "Hit point set at: (" << hitLatitude << ", " << hitLongitude << ")" << std::endl;
-            }
+            
         } else {
             obstacleDetected = false;
             navigatingAroundObstacle = false;
@@ -240,7 +235,7 @@ public:
     // Method for wall-following behavior
     void followWall() {
         double desiredDistance = 1.0; // Desired distance from the wall (meters)
-        double k_p = 1.0; // Proportional gain
+        double k_p = 2.0; // Proportional gain
 
         geometry_msgs::Twist twistMsg;
 
@@ -251,14 +246,24 @@ public:
             case WallFollowState::FOLLOW_WALL:
                 std::cout << "State: FOLLOW_WALL" << std::endl;
                 if (frontDist < desiredDistance) {
+                    hitLatitude = currentLatitude;
+                    hitLongitude = currentLongitude;
+                    hitPointSet = true;
+                    std::cout << "Hit point set at: (" << hitLatitude << ", " << hitLongitude << ")" << std::endl;
+            
                     // Obstacle in front, transition to TURN_LEFT state
                     wallFollowState = WallFollowState::TURN_LEFT;
                     std::cout << "Transition to TURN_LEFT" << std::endl;
                 } else if (crash) {
                     // Very close to a corner, transition to TURN_RIGHT state
                     wallFollowState = WallFollowState::TURN_LEF;
-                    std::cout << "Transition to TURN_RIGHT" << std::endl;
-                } else if (rightDist > desiredDistance * 3 && !std::isinf(rightDist)) {
+                    std::cout << "Transition" << std::endl;
+                } 
+                //else if (rightDist > desiredDistance * 1.5 && !std::isinf(rightDist)) {
+                   // wallFollowState = WallFollowState::FIND_WALL;
+                   // std::cout << "Transition to FIND_WALL" << std::endl;
+                //}
+                else if (rightDist > desiredDistance * 2) {
                     // Lost the wall, transition to FIND_WALL state
                     //wallFollowState = WallFollowState::FIND_WALL;
                     if(obstacleDetected) {
@@ -266,7 +271,7 @@ public:
                         twistMsg.angular.z = 0.0;
                     }
                     navigatingAroundObstacle=false;
-                    std::cout << "Transition to FIND_WALL" << std::endl;
+                    //std::cout << "Transition to FIND_WALL" << std::endl;
                 } else {
                     // Maintain distance from the wall on the right
                     double error = desiredDistance - rightDist;
@@ -289,11 +294,6 @@ public:
 
             case WallFollowState::TURN_LEF:
                 std::cout << "State: TURN_LEF" << std::endl;
-                if (rightDist <= (desiredDistance + 0.05) && rightDist >= (desiredDistance - 0.05) && std::isinf(frontDist)) {
-                    // Aligned with the wall and obstacle cleared, transition back to FOLLOW_WALL state
-                    wallFollowState = WallFollowState::FOLLOW_WALL;
-                    std::cout << "Transition to FOLLOW_WALL after aligning with wall and clearing obstacle" << std::endl;
-                }
                 if (rightDist<desiredDistance && rightDist>0.4) {
                 twistMsg.linear.x = 0.3;
                 twistMsg.angular.z = 0.1;
@@ -306,15 +306,13 @@ public:
                 break;
 
             case WallFollowState::FIND_WALL:
-                std::cout << "State: FIND_WALL" << std::endl;
-                if (rightDist <= desiredDistance * 2) {
-                    // Wall found, transition back to FOLLOW_WALL state
-                    wallFollowState = WallFollowState::FOLLOW_WALL;
-                    std::cout << "Transition to FOLLOW_WALL" << std::endl;
-                }
-                twistMsg.linear.x = 0.0;
-                twistMsg.angular.z = -0.5;
-                break;
+            std::cout << "State: FIND_WALL" << std::endl;
+            twistMsg.linear.x = 0.0; // Move forward
+            twistMsg.angular.z = -0.2; // Turn right slightly to find the wall
+            std::cout << "Finding the wall by moving forward and turning right" << std::endl;
+            wallFollowState = WallFollowState::FOLLOW_WALL;
+                
+            break;
         }
 
         cmdVelPub.publish(twistMsg);
@@ -325,7 +323,7 @@ public:
         ros::Rate loop_rate(10); // 10 Hz
 
         double initialBearing = calculateBearing(currentLatitude, currentLongitude, targetLatitude, targetLongitude);
-        std::cout << "Initial bearing: " << initialBearing << " degrees" << std::endl;
+        //std::cout << "Initial bearing: " << initialBearing << " degrees" << std::endl;
         
         while (ros::ok()) {
             // Get the current location of the rover
@@ -337,8 +335,9 @@ public:
                 slope = (targetLatitude - hitLatitude) / (targetLongitude - hitLongitude);
                 yIntercept = hitLatitude - slope * hitLongitude;
                 D1 = calculateDistance(targetLatitude, targetLongitude, hitLatitude, hitLongitude);
-                std::cout << slope << " " << yIntercept << std::endl;
-                std::cout << "Line equation: latitude = " << slope << " * longitude + " << yIntercept << std::endl; }
+                //std::cout << slope << " " << yIntercept << std::endl;
+                //std::cout << "Line equation: latitude = " << slope << " * longitude + " << yIntercept << std::endl; 
+                }
 
             // Calculate distance to target
             double distance = calculateDistance(targetLatitude, targetLongitude, currentLatitude, currentLongitude);
@@ -354,7 +353,7 @@ public:
                 angleError += 360.0;
             }
 
-            std::cout << "Yaw: " << currentYaw << " degrees, Angle error: " << angleError << " degrees" << std::endl;
+            //std::cout << "Yaw: " << currentYaw << " degrees, Angle error: " << angleError << " degrees" << std::endl;
 
             geometry_msgs::Twist twistMsg;
 
@@ -382,18 +381,20 @@ public:
             }
             else if (obstacleDetected || navigatingAroundObstacle) {
                 initialBearing = calculateBearing(currentLatitude, currentLongitude, targetLatitude, targetLongitude);
-                std::cout << "Initial bearing: " << initialBearing << " degrees" << std::endl;
-                std::cout << std::abs(currentLatitude - (slope * currentLongitude + yIntercept)) << "AAAAAAAAAAAA" << std::endl;
-                std::cout << currentLatitude << " " << currentLongitude << std::endl;
-                /* if ((distance < D1*0.7) && (std::abs(currentLatitude - (slope * currentLongitude + yIntercept)) < 0.000001)) {
+                //std::cout << "Initial bearing: " << initialBearing << " degrees" << std::endl;
+                //std::cout << std::abs(currentLatitude - (slope * currentLongitude + yIntercept)) << "AAAAAAAAAAAA" << std::endl;
+                //std::cout << currentLatitude << " " << currentLongitude << std::endl;
+                 if ((distance < D1-0.4) && (std::abs(currentLatitude - (slope * currentLongitude + yIntercept)) < 0.000001)) {
                     std::cout << "INNNNNNNNNNNNNNNNNNN" << std::endl;
                     twistMsg.angular.z = angleError * 0.2; // Adjust yaw
                     twistMsg.linear.x = 0.0;
                     cmdVelPub.publish(twistMsg); 
                     navigatingAroundObstacle=false;}
-                else { */
+                else { 
+                    std::cout << "HIIIIIIIIIIIII" << std::endl;
                     followWall();
                     navigatingAroundObstacle = true; } // Set flag to indicate navigating around an obstacle
+            }
             else if (distance > 0.3 && std::fabs(angleError) <= 0.1) {
                 twistMsg.linear.x = 0.3; // Move forward
                 twistMsg.angular.z = 0.0; // Go straight
