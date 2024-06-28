@@ -19,45 +19,45 @@ def detect_markers(image):
     
     for aruco_type, dictionary_id in ARUCO_DICT.items():
         arucoDict = cv2.aruco.getPredefinedDictionary(dictionary_id)
-        arucoParams = cv2.aruco.DetectorParameters()
-        corners, ids, _ = cv2.aruco.detectMarkers(image, arucoDict, parameters=arucoParams)
 
-        if len(corners) > 0:
+        # Detect markers without DetectorParameters
+        corners, ids, _ = cv2.aruco.detectMarkers(image, arucoDict)
+
+        if ids is not None and len(ids) > 0:
             aruco_type_list.append(aruco_type)
             print(f"Markers detected using {aruco_type} dictionary")
 
-            for markerCorner, markerId in zip(corners, ids.flatten()):
-                corners_aruco = markerCorner.reshape((4, 2))
-                (topLeft, topRight, bottomRight, bottomLeft) = corners_aruco
+            for i in range(len(ids)):
+                markerId = ids[i][0]
+                markerCorner = corners[i][0]
 
                 cv2.polylines(image, [markerCorner.astype(int)], True, (0, 255, 0), 2)
 
-                cX = int((topLeft[0] + bottomRight[0]) / 2)
-                cY = int((topLeft[1] + bottomRight[1]) / 2)
+                cX = int(np.mean(markerCorner[:, 0]))
+                cY = int(np.mean(markerCorner[:, 1]))
 
                 cv2.circle(image, (cX, cY), 5, (255, 0, 0), -1)
                 cv2.putText(image, str(aruco_type) + " " + str(int(markerId)),
-                            (int(topLeft[0] - 5), int(topLeft[1])), cv2.FONT_HERSHEY_COMPLEX, 0.5, (255, 0, 255))
+                            (int(markerCorner[0, 0] - 5), int(markerCorner[0, 1])), cv2.FONT_HERSHEY_COMPLEX, 0.5, (255, 0, 255))
             
     return aruco_type_list
 
 def pose_estimation(frame, aruco_dict_type, matrix_coefficients, distortion_coefficients):
     aruco_dict = cv2.aruco.getPredefinedDictionary(aruco_dict_type)
-    parameters = cv2.aruco.DetectorParameters()
 
-    corners, ids, _ = cv2.aruco.detectMarkers(frame, aruco_dict, parameters=parameters)
+    corners, ids, _ = cv2.aruco.detectMarkers(frame, aruco_dict)
 
-    if len(corners) > 0:
-        for i in range(0, len(ids)):
+    if ids is not None and len(ids) > 0:
+        for i in range(len(ids)):
             rvec, tvec, _ = cv2.aruco.estimatePoseSingleMarkers(corners[i], 0.025, matrix_coefficients, distortion_coefficients)
             cv2.aruco.drawDetectedMarkers(frame, corners)
-            cv2.drawFrameAxes(frame, matrix_coefficients, distortion_coefficients, rvec, tvec, 0.01)
+            cv2.aruco.drawAxis(frame, matrix_coefficients, distortion_coefficients, rvec, tvec, 0.01)
              
     return frame
 
 if __name__ == "__main__":
-    intrinsic_camera = np.array([[933.15867, 0, 657.59], [0, 933.1586, 400.36993], [0, 0, 1]])
-    distortion = np.array([-0.43948, 0.18514, 0, 0])
+    intrinsic_camera = np.array([[519.3251048,0,349.09987307],[0,514.40756404,250.43849652],[0,0,1]])
+    distortion = np.array([0.26675745,-2.31755081,0.01089678,-0.00866381,4.52638704])
 
     cap = cv2.VideoCapture(0)
 
