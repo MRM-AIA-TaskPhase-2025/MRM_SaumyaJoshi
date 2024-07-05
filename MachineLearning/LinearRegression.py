@@ -1,7 +1,7 @@
 import numpy as np
 import pandas as pd
 from sklearn.model_selection import train_test_split
-from sklearn.metrics import mean_squared_error
+from sklearn.metrics import mean_squared_error, mean_absolute_error
 
 df = pd.read_csv('winequality-red.csv')
 
@@ -72,6 +72,8 @@ else:
     print(f"Mean Squared Error: {mse}")
     rmse = np.sqrt(mse)
     print(f"Root Mean Squared Error: {rmse}")
+    mae = mean_absolute_error(y_test, y_pred)
+    print(f"Mean Absolute Error: {mae}")
 
 '''def predict_custom_features(custom_features, mean_train, std_train, weights, bias):
     custom_features_normalized = (custom_features - mean_train) / std_train
