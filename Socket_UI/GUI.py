@@ -170,7 +170,10 @@ class IMUGUI(QWidget):
                 os.makedirs(self.image_folder)
             
             screenshot_path = os.path.join(self.image_folder, f'screenshot_{self.image_counter}.png')
-            screenshot = QPixmap.grabWidget(self.video_label)
+            
+            # Take a screenshot of the video_label widget
+            screenshot = self.video_label.grab()
+            
             screenshot.save(screenshot_path)
             self.image_counter += 1
             QMessageBox.information(self, 'Screenshot Taken', f'Screenshot saved as {screenshot_path}')
@@ -185,18 +188,28 @@ class IMUGUI(QWidget):
                     os.makedirs(self.video_folder)
                 
                 video_path = os.path.join(self.video_folder, f'recorded_video.mp4')
-                fourcc = cv2.VideoWriter_fourcc(*'XVID')
+                fourcc = cv2.VideoWriter_fourcc(*'mp4v')
                 frame_width, frame_height = 320, 240  # Adjust dimensions as needed
                 self.recorded_video = cv2.VideoWriter(video_path, fourcc, 10, (frame_width, frame_height))
+                
+                if not self.recorded_video.isOpened():
+                    raise Exception("Failed to open video file for writing")
+                
                 self.is_recording = True
                 self.record_button.setText('Stop Recording')
                 QMessageBox.information(self, 'Recording Started', f'Recording video to {video_path}')
             
             except Exception as e:
+                self.is_recording = False
+                self.recorded_video = None
+                self.record_button.setText('Record Video')
                 QMessageBox.warning(self, 'Error', f'Failed to start recording: {e}')
         
         else:
-            self.recorded_video.release()
+            if self.recorded_video is not None:
+                self.recorded_video.release()
+                self.recorded_video = None
+            
             self.is_recording = False
             self.record_button.setText('Record Video')
             QMessageBox.information(self, 'Recording Stopped', 'Video recording stopped.')
