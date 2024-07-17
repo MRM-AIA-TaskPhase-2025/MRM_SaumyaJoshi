@@ -4,14 +4,11 @@ import sys
 import rospy
 import cv2
 import os
-import csv
-import pandas as pd
 from sensor_msgs.msg import Imu, Image, NavSatFix, LaserScan
 from cv_bridge import CvBridge, CvBridgeError
 from PyQt5.QtWidgets import QApplication, QLabel, QVBoxLayout, QWidget, QSpacerItem, QSizePolicy, QPushButton, QMessageBox
-from PyQt5.QtCore import Qt, QTimer
+from PyQt5.QtCore import Qt
 from PyQt5.QtGui import QImage, QPixmap
-from std_srvs.srv import Empty, EmptyResponse
 
 class IMUGUI(QWidget):
     def __init__(self):
@@ -21,6 +18,7 @@ class IMUGUI(QWidget):
         self.image_folder = 'screenshots'
         self.video_folder = 'videos'
         self.image_counter = 0
+        self.video_counter = 0
         self.is_recording = False
         self.recorded_video = None
         self.initUI()
@@ -35,7 +33,7 @@ class IMUGUI(QWidget):
         layout.setContentsMargins(20, 20, 20, 20)  # Adjust margins as needed
         layout.setSpacing(10)
         
-        self.heading_label_imu = QLabel('IMU DATA:', self)
+        self.heading_label_imu = QLabel('Imu Data:', self)
         self.heading_label_imu.setStyleSheet("font-size: 20px; font-weight: bold;")
         layout.addWidget(self.heading_label_imu, alignment=Qt.AlignTop)
 
@@ -138,13 +136,12 @@ class IMUGUI(QWidget):
             self.video_label.setPixmap(QPixmap.fromImage(q_image))
             
             if self.is_recording:
-                self.recorded_video.write(cv_image)
+                self.recorded_video.write(cv_image_resized)
             
         except CvBridgeError as e:
             rospy.logerr(f"Failed to convert image: {e}")
 
     def update_gps(self, data):
-        #rospy.loginfo("Received GPS data.")
         gps_text = (f"Latitude: {data.latitude}\n"
                     f"Longitude: {data.longitude}\n"
                     f"Altitude: {data.altitude}")
@@ -172,7 +169,8 @@ class IMUGUI(QWidget):
             screenshot_path = os.path.join(self.image_folder, f'screenshot_{self.image_counter}.png')
             
             # Take a screenshot of the video_label widget
-            screenshot = self.video_label.grab()
+            screenshot = self.video_label.pixmap().toImage()
+            screenshot = screenshot.scaled(620, 410, Qt.KeepAspectRatio)  # Adjust dimensions as needed
             
             screenshot.save(screenshot_path)
             self.image_counter += 1
@@ -187,7 +185,7 @@ class IMUGUI(QWidget):
                 if not os.path.exists(self.video_folder):
                     os.makedirs(self.video_folder)
                 
-                video_path = os.path.join(self.video_folder, f'recorded_video.mp4')
+                video_path = os.path.join(self.video_folder, f'video_{self.video_counter}.mp4')
                 fourcc = cv2.VideoWriter_fourcc(*'mp4v')
                 frame_width, frame_height = 320, 240  # Adjust dimensions as needed
                 self.recorded_video = cv2.VideoWriter(video_path, fourcc, 10, (frame_width, frame_height))
@@ -213,6 +211,7 @@ class IMUGUI(QWidget):
             self.is_recording = False
             self.record_button.setText('Record Video')
             QMessageBox.information(self, 'Recording Stopped', 'Video recording stopped.')
+            self.video_counter += 1
 
 if __name__ == '__main__':
     app = QApplication(sys.argv)
