@@ -53,7 +53,17 @@ void Rover::processPointCloud(const pcl::PointCloud<pcl::PointXYZ>::Ptr& cloud_n
     for (const auto& point : cloud_no_ground->points) {
         double distance = sqrt(pow(point.x, 2) + pow(point.y, 2) + pow(point.z, 2));
 
-        
+        if (point.y > 0) {
+            if (fabs(point.x) < fabs(point.y)) {
+                front_distance = std::min(front_distance, distance);
+            } else if (point.x > 0) {
+                right_distance = std::min(right_distance, distance);
+            } else {
+                left_distance = std::min(left_distance, distance);
+            }
+        }
+    }
+
     ROS_INFO("Front distance: %f, Right distance: %f, Left distance: %f",
              front_distance, right_distance, left_distance);
 
